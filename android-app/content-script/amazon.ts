@@ -95,8 +95,17 @@ const title = document.title
 const config = { attributes: true, childList: true, subtree: true }
 const AMAZON_PAID_CARD_SELECTOR = 'article[data-card-entitlement="Unentitled"]'
 const AMAZON_STORE_ICON_SELECTOR = "svg.NbhXwl, [data-testid='entitlement-icon'] svg"
+const AMAZON_ENTITLEMENT_ICON_SELECTOR = "[data-testid='entitlement-icon']"
 const AMAZON_ALLOWED_FILTER_PATHS = /(storefront|genre|movie|amazon-video|\/tv|\/addons)/i
+const AMAZON_FILTER_THROTTLE_MS = 350
+const AMAZON_FILTER_BOOTSTRAP_INTERVAL_MS = 220
+const AMAZON_FILTER_BOOTSTRAP_DURATION_MS = 2200
 let lastFilterPaidDebugAt = 0
+let lastFilterPaidRunAt = 0
+let filterPaidScheduled = false
+function isPaidEntitlementText(label: string | null | undefined) {
+	return /(store|rent|buy|purchase|paid|nolegg|acquist|compra|louer|acheter|kaufen|leihen)/i.test(label ?? "")
+}
 async function logStartOfAddon() {
 	console.log("%cStreaming enhanced", "color: #00aeef;font-size: 2em;")
 	console.log("Settings", settings.value)
@@ -123,6 +132,9 @@ async function startAmazon() {
 	adjustForTV()
 	AmazonSkipIntroObserver.observe(document, AmazonSkipIntroConfig)
 	if (settings.value.Amazon?.speedSlider) Amazon_SpeedKeyboard()
+	if (settings.value.Amazon?.filterPaid) {
+		bootstrapAmazonFilterPaid()
+	}
 	AmazonObserver.observe(document, config)
 	if (settings.value.Amazon?.selfAd) Amazon_selfAdTimeout()
 	if (settings.value.Amazon?.skipAd) {
@@ -132,6 +144,19 @@ async function startAmazon() {
 		}, 1000)
 	}
 	if (settings.value.Amazon?.continuePosition) setTimeout(() => Amazon_continuePosition(), 500)
+}
+
+function bootstrapAmazonFilterPaid() {
+	Amazon_FilterPaid()
+	const bootstrapStartedAt = Date.now()
+	const bootstrapInterval = setInterval(() => {
+		if (!settings.value.Amazon?.filterPaid) {
+			clearInterval(bootstrapInterval)
+			return
+		}
+		Amazon_FilterPaid()
+		if (Date.now() - bootstrapStartedAt >= AMAZON_FILTER_BOOTSTRAP_DURATION_MS) clearInterval(bootstrapInterval)
+	}, AMAZON_FILTER_BOOTSTRAP_INTERVAL_MS)
 }
 
 // #region Amazon
@@ -316,6 +341,12 @@ async function Amazon_FilterPaid() {
 	const currentUrl = window.location.href
 	// only run in storefront-like pages where rows are rendered
 	if (!AMAZON_ALLOWED_FILTER_PATHS.test(currentUrl)) return
+	const now = Date.now()
+	if (now - lastFilterPaidRunAt < AMAZON_FILTER_THROTTLE_MS) {
+		scheduleAmazonFilterPaid()
+		return
+	}
+	lastFilterPaidRunAt = now
 
 	const carouselRows = Array.from(document.querySelectorAll("section[data-testid*='carousel'] ul"))
 	let rowsWithPaidContent = 0
@@ -330,12 +361,27 @@ async function Amazon_FilterPaid() {
 		console.log("FilterPaid active but no paid markers found", { url: currentUrl, carousels: carouselRows.length })
 	}
 }
+function scheduleAmazonFilterPaid() {
+	if (filterPaidScheduled) return
+	filterPaidScheduled = true
+	setTimeout(() => {
+		filterPaidScheduled = false
+		Amazon_FilterPaid()
+	}, AMAZON_FILTER_THROTTLE_MS)
+}
 function hasPaidMarker(element: ParentNode) {
 	if (element.querySelector(AMAZON_PAID_CARD_SELECTOR)) return true
+	if (element.querySelector(AMAZON_ENTITLEMENT_ICON_SELECTOR)) return true
+	if (Array.from(element.querySelectorAll("[aria-label], [title], [data-testid*='entitlement']")).some((node) => {
+		const label = (node.getAttribute("aria-label") ?? node.getAttribute("title") ?? node.textContent ?? "").trim()
+		return isPaidEntitlementText(label)
+	})) {
+		return true
+	}
 	return Array.from(element.querySelectorAll(AMAZON_STORE_ICON_SELECTOR)).some((icon) => {
 		if (icon.classList.contains("NbhXwl")) return true
 		const iconTitle = icon.querySelector("title")?.textContent ?? ""
-		return /store/i.test(iconTitle)
+		return /store/i.test(iconTitle) || isPaidEntitlementText(iconTitle)
 	})
 }
 async function deletePaidCategory(a: HTMLElement) {

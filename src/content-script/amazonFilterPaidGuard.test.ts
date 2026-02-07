@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {
+	isPaidEntitlementText,
 	isStoreIconTitle,
 	shouldRemoveWholePaidSection,
 	shouldRunAmazonPaidFilter,
@@ -8,6 +9,8 @@ import {
 
 test("shouldRunAmazonPaidFilter matches storefront and browse urls", () => {
 	assert.equal(shouldRunAmazonPaidFilter("https://www.primevideo.com/storefront/home"), true)
+	assert.equal(shouldRunAmazonPaidFilter("https://www.primevideo.com/home"), true)
+	assert.equal(shouldRunAmazonPaidFilter("https://www.primevideo.com/"), true)
 	assert.equal(shouldRunAmazonPaidFilter("https://www.primevideo.com/movie/0ABC"), true)
 	assert.equal(shouldRunAmazonPaidFilter("https://www.primevideo.com/tv"), true)
 	assert.equal(shouldRunAmazonPaidFilter("https://www.primevideo.com/addons"), true)
@@ -23,6 +26,14 @@ test("isStoreIconTitle identifies paid icon labels", () => {
 	assert.equal(isStoreIconTitle("store"), true)
 	assert.equal(isStoreIconTitle("Prime"), false)
 	assert.equal(isStoreIconTitle(undefined), false)
+})
+
+test("isPaidEntitlementText identifies paid labels across languages", () => {
+	assert.equal(isPaidEntitlementText("Rent or Buy"), true)
+	assert.equal(isPaidEntitlementText("Acquista o noleggia"), true)
+	assert.equal(isPaidEntitlementText("Louer ou acheter"), true)
+	assert.equal(isPaidEntitlementText("Included with Prime"), false)
+	assert.equal(isPaidEntitlementText(undefined), false)
 })
 
 test("shouldRemoveWholePaidSection follows current threshold rule", () => {

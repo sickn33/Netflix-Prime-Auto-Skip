@@ -9,6 +9,16 @@
   - eligible Prime URLs,
   - paid store icon title detection,
   - section-removal threshold logic.
+- Added CPU-safety optimizations for paid filtering:
+  - throttle filter execution (`350ms`) when MutationObserver fires frequently,
+  - keep a trailing run after throttle windows so events are not missed.
+- Added startup bootstrap filtering to reduce first-render paid-card flash:
+  - run immediate filter once at startup,
+  - re-run on a short bounded interval (`220ms`) for ~`2.2s` only,
+  - then stop automatically (no continuous polling).
+- Expanded paid marker detection to handle localized/variant labels:
+  - treat entitlement icon containers as paid markers,
+  - detect paid labels in `aria-label` / `title` / entitlement text (e.g. rent/buy/acquista/noleggia).
 
 ## Files changed
 - `src/content-script/amazon.ts`
@@ -26,3 +36,5 @@
    - Debug log (if none found): `FilterPaid active but no paid markers found`
 5. Run automated regression check:
    - `npm run test:amazon-filter`
+6. Optional UX check:
+   - on first page load, paid cards may briefly paint but should disappear quickly without persistent flicker.
