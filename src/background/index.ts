@@ -38,6 +38,11 @@ self.onerror = function (message, source, lineno, colno, error) {
 	console.info("Column: " + colno)
 	console.info("Error object: " + error)
 }
+self.addEventListener("unhandledrejection", (event) => {
+	console.error("Unhandled promise rejection in background SW:", event.reason)
+	// Prevent noisy uncaught promise logs from tearing down SW runtime.
+	event.preventDefault()
+})
 
 import { onMessage } from "webext-bridge/background"
 console.log("background loaded")
@@ -61,6 +66,26 @@ async function setBadgeText(text: string, tabId: number) {
 	Badges[tabId] = text
 	action.setBadgeText({ text, tabId })
 }
+async function resetBadge(tabId: number) {
+	if (Badges[tabId]) delete Badges[tabId]
+	action.setBadgeText({ text: "", tabId })
+}
+async function fetchFromTmdb(url: string) {
+	try {
+		const response = await fetch(url, {
+			method: "GET",
+			headers: {
+				accept: "application/json",
+				Authorization:
+					"Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5OWQyMWUxMmYzNjU1MjM4NzdhNTAwODVhMmVjYThiZiIsInN1YiI6IjY1M2E3Mjg3MjgxMWExMDBlYTA4NjI5OCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.x_EaVXQkg1_plk0NVSBnoNUl4QlGytdeO613nXIsP3w",
+			},
+		})
+		return await response.json()
+	} catch (error) {
+		console.error(error)
+		return { error: (error as Error).message }
+	}
+}
 
 // onMessage
 onMessage("updateUrl", async (message: { sender: any; data: { url: string } }) => {
@@ -72,31 +97,32 @@ onMessage("updateUrl", async (message: { sender: any; data: { url: string } }) =
 })
 onMessage("fetch", async (message: { data: { url: string } }) => {
 	const { data } = message
-	try {
-		const response = await fetch(data.url, {
-			method: "GET",
-			headers: {
-				accept: "application/json",
-				Authorization:
-					"Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI5OWQyMWUxMmYzNjU1MjM4NzdhNTAwODVhMmVjYThiZiIsInN1YiI6IjY1M2E3Mjg3MjgxMWExMDBlYTA4NjI5OCIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.x_EaVXQkg1_plk0NVSBnoNUl4QlGytdeO613nXIsP3w",
-			},
-		})
-		const responseData = await response.json()
-		return responseData
-	} catch (error) {
-		console.error(error)
-		return { error: (error as Error).message }
-	}
+	return fetchFromTmdb(data.url)
 })
 // allowWindowMessaging is security risk thats why we are not using it and using chrome.message instead
 // receive message from content script with the badgeText and set it in the badge
-chrome.runtime.onMessage.addListener(function (message: { type: string }, sender: any, sendResponse: () => void) {
+chrome.runtime.onMessage.addListener(function (
+	message: { type: string; data?: { text?: string; url?: string } },
+	sender: any,
+	sendResponse: (response?: unknown) => void,
+) {
 	if (message.type === "fullscreen") {
 		console.log("fullscreen")
 		if (sender?.tab?.windowId) chrome.windows.update(sender.tab.windowId, { state: "fullscreen" })
 	} else if (message.type === "exitFullscreen") {
 		console.log("exitFullscreen")
 		if (sender?.tab?.windowId) chrome.windows.update(sender.tab.windowId, { state: "normal" })
+	} else if (message.type === "increaseBadge") {
+		if (sender?.tab?.id) void increaseBadge(sender.tab.id)
+	} else if (message.type === "setBadgeText") {
+		if (sender?.tab?.id && message.data?.text) void setBadgeText(message.data.text, sender.tab.id)
+	} else if (message.type === "resetBadge") {
+		if (sender?.tab?.id) void resetBadge(sender.tab.id)
+	} else if (message.type === "updateUrl") {
+		if (sender?.tab?.id && message.data?.url) void chrome.tabs.update(sender.tab.id, { url: message.data.url })
+	} else if (message.type === "fetch") {
+		void fetchFromTmdb(message.data?.url ?? "").then((response) => sendResponse(response))
+		return true
 	}
 	return false
 })
@@ -111,8 +137,7 @@ onMessage("increaseBadge", async (message: { sender: any }) => {
 onMessage("resetBadge", async (message: { sender: any }) => {
 	const { sender } = message
 	if (sender?.tabId) {
-		if (Badges[sender.tabId]) delete Badges[sender.tabId]
-		action.setBadgeText({ text: "", tabId: sender.tabId })
+		resetBadge(sender.tabId)
 	}
 })
 if (isFirefox && isMobile) {

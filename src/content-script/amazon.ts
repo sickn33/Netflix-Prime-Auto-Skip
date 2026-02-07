@@ -1,4 +1,4 @@
-import { sendMessage } from "webext-bridge/content-script"
+import { sendMessage } from "@/content-script/backgroundMessaging"
 import { startSharedFunctions, parseAdTime, createSlider, Platforms } from "@/content-script/shared-functions"
 import {
 	isPaidEntitlementText,
@@ -21,7 +21,6 @@ const isPrimeVideo = /amazon|primevideo/i.test(hostname) && (/video/i.test(title
 const config = { attributes: true, childList: true, subtree: true }
 const AMAZON_PAID_CARD_SELECTOR = 'article[data-card-entitlement="Unentitled"]'
 const AMAZON_STORE_ICON_SELECTOR = "svg.NbhXwl, [data-testid='entitlement-icon'] svg"
-const AMAZON_ENTITLEMENT_ICON_SELECTOR = "[data-testid='entitlement-icon']"
 const AMAZON_FILTER_THROTTLE_MS = 350
 const AMAZON_FILTER_BOOTSTRAP_INTERVAL_MS = 220
 const AMAZON_FILTER_BOOTSTRAP_DURATION_MS = 2200
@@ -306,7 +305,6 @@ function scheduleAmazonFilterPaid() {
 }
 function hasPaidMarker(element: ParentNode) {
 	if (element.querySelector(AMAZON_PAID_CARD_SELECTOR)) return true
-	if (element.querySelector(AMAZON_ENTITLEMENT_ICON_SELECTOR)) return true
 	if (Array.from(element.querySelectorAll("[aria-label], [title], [data-testid*='entitlement']")).some((node) => {
 		const label = (node.getAttribute("aria-label") ?? node.getAttribute("title") ?? node.textContent ?? "").trim()
 		return isPaidEntitlementText(label)

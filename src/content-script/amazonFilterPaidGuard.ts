@@ -11,12 +11,14 @@ export function shouldRunAmazonPaidFilter(url: string) {
 }
 
 export function isStoreIconTitle(title: string | null | undefined) {
-	return /store/i.test(title ?? "")
+	// Match "Store" icon labels but avoid broad matches like "storefront".
+	return /(^|[^a-z])store([^a-z]|$)/i.test(title ?? "")
 }
 
 export function isPaidEntitlementText(label: string | null | undefined) {
 	// Includes common Prime storefront paid labels across languages.
-	return /(store|rent|buy|purchase|paid|nolegg|acquist|compra|louer|acheter|kaufen|leihen)/i.test(label ?? "")
+	// Intentionally avoids broad "store" and "paid" terms to prevent false positives on hover cards.
+	return /(rent|buy|purchase|nolegg|acquist|louer|acheter|kaufen|leihen|alquila|alugar)/i.test(label ?? "")
 }
 
 export function shouldRemoveWholePaidSection(visibleCardsCount: number, paidCardsCount: number, bannerOffset = 2) {

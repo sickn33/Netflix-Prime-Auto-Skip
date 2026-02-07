@@ -1,4 +1,4 @@
-import { sendMessage } from "webext-bridge/content-script"
+import { sendMessage } from "@/content-script/backgroundMessaging"
 console.log("shared-functions loaded")
 // Global Variables
 

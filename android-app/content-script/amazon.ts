@@ -95,7 +95,6 @@ const title = document.title
 const config = { attributes: true, childList: true, subtree: true }
 const AMAZON_PAID_CARD_SELECTOR = 'article[data-card-entitlement="Unentitled"]'
 const AMAZON_STORE_ICON_SELECTOR = "svg.NbhXwl, [data-testid='entitlement-icon'] svg"
-const AMAZON_ENTITLEMENT_ICON_SELECTOR = "[data-testid='entitlement-icon']"
 const AMAZON_ALLOWED_FILTER_PATHS = /(storefront|genre|movie|amazon-video|\/tv|\/addons)/i
 const AMAZON_FILTER_THROTTLE_MS = 350
 const AMAZON_FILTER_BOOTSTRAP_INTERVAL_MS = 220
@@ -104,7 +103,7 @@ let lastFilterPaidDebugAt = 0
 let lastFilterPaidRunAt = 0
 let filterPaidScheduled = false
 function isPaidEntitlementText(label: string | null | undefined) {
-	return /(store|rent|buy|purchase|paid|nolegg|acquist|compra|louer|acheter|kaufen|leihen)/i.test(label ?? "")
+	return /(rent|buy|purchase|nolegg|acquist|louer|acheter|kaufen|leihen|alquila|alugar)/i.test(label ?? "")
 }
 async function logStartOfAddon() {
 	console.log("%cStreaming enhanced", "color: #00aeef;font-size: 2em;")
@@ -371,7 +370,6 @@ function scheduleAmazonFilterPaid() {
 }
 function hasPaidMarker(element: ParentNode) {
 	if (element.querySelector(AMAZON_PAID_CARD_SELECTOR)) return true
-	if (element.querySelector(AMAZON_ENTITLEMENT_ICON_SELECTOR)) return true
 	if (Array.from(element.querySelectorAll("[aria-label], [title], [data-testid*='entitlement']")).some((node) => {
 		const label = (node.getAttribute("aria-label") ?? node.getAttribute("title") ?? node.textContent ?? "").trim()
 		return isPaidEntitlementText(label)
@@ -381,7 +379,7 @@ function hasPaidMarker(element: ParentNode) {
 	return Array.from(element.querySelectorAll(AMAZON_STORE_ICON_SELECTOR)).some((icon) => {
 		if (icon.classList.contains("NbhXwl")) return true
 		const iconTitle = icon.querySelector("title")?.textContent ?? ""
-		return /store/i.test(iconTitle) || isPaidEntitlementText(iconTitle)
+		return /(^|[^a-z])store([^a-z]|$)/i.test(iconTitle) || isPaidEntitlementText(iconTitle)
 	})
 }
 async function deletePaidCategory(a: HTMLElement) {

@@ -1,4 +1,4 @@
-import { sendMessage } from "webext-bridge/content-script"
+import { sendMessage } from "@/content-script/backgroundMessaging"
 import { startSharedFunctions, Platforms } from "@/content-script/shared-functions"
 startSharedFunctions(Platforms.Crunchyroll)
 // Global Variables

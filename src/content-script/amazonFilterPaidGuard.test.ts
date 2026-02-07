@@ -24,6 +24,7 @@ test("shouldRunAmazonPaidFilter ignores detail pages", () => {
 test("isStoreIconTitle identifies paid icon labels", () => {
 	assert.equal(isStoreIconTitle("Store Filled"), true)
 	assert.equal(isStoreIconTitle("store"), true)
+	assert.equal(isStoreIconTitle("Prime storefront"), false)
 	assert.equal(isStoreIconTitle("Prime"), false)
 	assert.equal(isStoreIconTitle(undefined), false)
 })
@@ -32,6 +33,7 @@ test("isPaidEntitlementText identifies paid labels across languages", () => {
 	assert.equal(isPaidEntitlementText("Rent or Buy"), true)
 	assert.equal(isPaidEntitlementText("Acquista o noleggia"), true)
 	assert.equal(isPaidEntitlementText("Louer ou acheter"), true)
+	assert.equal(isPaidEntitlementText("Storefront"), false)
 	assert.equal(isPaidEntitlementText("Included with Prime"), false)
 	assert.equal(isPaidEntitlementText(undefined), false)
 })

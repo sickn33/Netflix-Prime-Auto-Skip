@@ -17,14 +17,23 @@
   - re-run on a short bounded interval (`220ms`) for ~`2.2s` only,
   - then stop automatically (no continuous polling).
 - Expanded paid marker detection to handle localized/variant labels:
-  - treat entitlement icon containers as paid markers,
   - detect paid labels in `aria-label` / `title` / entitlement text (e.g. rent/buy/acquista/noleggia).
+- Fixed hover regression where normal cards could disappear:
+  - removed the overly broad rule `entitlement-icon present => paid`,
+  - narrowed paid keyword matching to true paid intents (rent/buy/purchase and localized equivalents),
+  - tightened `store` icon-title matching to avoid matching words like `storefront`.
+- Hardened background messaging to avoid `No SW` failures:
+  - added a content-script messaging wrapper with fallback from `webext-bridge` to `chrome.runtime.sendMessage`,
+  - added equivalent background `chrome.runtime.onMessage` handlers for `increaseBadge`, `setBadgeText`, `resetBadge`, `updateUrl`, and `fetch`,
+  - added `unhandledrejection` logging/guard in Service Worker for safer diagnostics.
 
 ## Files changed
 - `src/content-script/amazon.ts`
 - `android-app/content-script/amazon.ts`
 - `src/content-script/amazonFilterPaidGuard.ts`
 - `src/content-script/amazonFilterPaidGuard.test.ts`
+- `src/content-script/backgroundMessaging.ts`
+- `src/background/index.ts`
 - `package.json` (`test:amazon-filter`)
 
 ## Validation steps

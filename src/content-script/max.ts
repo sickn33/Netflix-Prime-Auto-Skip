@@ -1,5 +1,5 @@
 import { startSharedFunctions, createSlider, Platforms } from "@/content-script/shared-functions"
-import { sendMessage } from "webext-bridge/content-script"
+import { sendMessage } from "@/content-script/backgroundMessaging"
 // Global Variables
 
 const { data: settings, promise } = useBrowserSyncStorage<settingsType>("settings", defaultSettings)

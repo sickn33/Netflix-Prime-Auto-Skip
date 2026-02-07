@@ -1,4 +1,4 @@
-import { sendMessage } from "webext-bridge/content-script"
+import { sendMessage } from "@/content-script/backgroundMessaging"
 import { createSlider } from "@/content-script/shared-functions"
 // Global Variables
 
